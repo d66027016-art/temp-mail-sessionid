@@ -919,6 +919,8 @@ def handle_exception(e):
     return jsonify({
         "error": str(e),
         "db_path": get_db_path(),
+        "file_path": os.path.abspath(__file__),
+        "env_vars": {k: v for k, v in os.environ.items() if "SECRET" not in k and "KEY" not in k and "PASSWORD" not in k and "TOKEN" not in k},
         "traceback": traceback.format_exc()
     }), 500
 
