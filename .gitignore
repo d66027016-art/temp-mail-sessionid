@@ -1,0 +1,25 @@
+# Database files
+temp_mail.db
+temp_mail.db-journal
+*.db
+*.sqlite
+
+# Environment variables containing sensitive secrets
+.env
+.env.*
+
+# Python bytecode and caches
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.venv/
+venv/
+env/
+
+# OS-specific files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store

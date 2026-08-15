@@ -1,0 +1,30 @@
+app = "temp-mail-app"
+primary_region = "lax"
+
+[build]
+
+[env]
+  CUSTOM_DOMAIN = "damxd.shop"
+  CUSTOM_DOMAINS = "anotherdomain.net"
+  DB_PATH = "/data/temp_mail.db"
+  SMTP_HOST = "0.0.0.0"
+  SMTP_PORT = "25"
+  API_PORT = "5000"
+
+[http_service]
+  internal_port = 5000
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[services]]
+  internal_port = 25
+  protocol = "tcp"
+
+  [[services.ports]]
+    port = 25
+
+[[mounts]]
+  source = "temp_mail_data"
+  destination = "/data"

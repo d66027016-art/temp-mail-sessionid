@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  damxd-mail:
+    build: .
+    container_name: damxd-mail-app
+    restart: always
+    ports:
+      # Format is "HOST_PORT:CONTAINER_PORT"
+      - "5000:5000"  # Web UI port
+      - "25:25"      # SMTP email incoming port
+    volumes:
+      # Persists the SQLite database so that it survives container restarts/updates
+      - damxd_mail_data:/data
+    env_file:
+      - .env
+    environment:
+      # Ensure database is written to the persistent volume mount point
+      - DB_PATH=/data/temp_mail.db
+      - SMTP_PORT=25
+      - SMTP_HOST=0.0.0.0
+      - API_PORT=5000
+
+volumes:
+  damxd_mail_data:
