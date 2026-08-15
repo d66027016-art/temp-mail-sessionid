@@ -44,7 +44,12 @@ except Exception:
 load_dotenv()
 
 CUSTOM_DOMAIN = os.getenv("CUSTOM_DOMAIN", "damxd.shop")
-DB_PATH = os.getenv("DB_PATH", "temp_mail.db")
+DB_PATH = os.getenv("DB_PATH")
+if not DB_PATH:
+    if os.environ.get('VERCEL') or os.environ.get('NOW_REGION'):
+        DB_PATH = "/tmp/temp_mail.db"
+    else:
+        DB_PATH = "temp_mail.db"
 SMTP_HOST = os.getenv("SMTP_HOST", "0.0.0.0")
 SMTP_PORT = int(os.getenv("SMTP_PORT", 2525))
 API_PORT = int(os.getenv("API_PORT", 5000))
@@ -886,6 +891,9 @@ app.secret_key = SECRET_KEY
 temp_mail = TempMail()
 domain_manager = DomainManager()
 user_manager = UserManager()
+
+# Initialize database tables (idempotent, runs on module import)
+init_db()
 
 @app.route('/api/auth/register', methods=['POST'])
 def register():

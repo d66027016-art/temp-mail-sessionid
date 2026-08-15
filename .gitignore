@@ -23,3 +23,6 @@ Thumbs.db
 ehthumbs.db
 Desktop.ini
 .DS_Store
+
+# Vercel deployments cache
+.vercel/
