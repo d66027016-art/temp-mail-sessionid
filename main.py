@@ -46,10 +46,16 @@ load_dotenv()
 CUSTOM_DOMAIN = os.getenv("CUSTOM_DOMAIN", "damxd.shop")
 DB_PATH = os.getenv("DB_PATH")
 if not DB_PATH:
-    if os.environ.get('VERCEL') or os.environ.get('NOW_REGION'):
-        DB_PATH = "/tmp/temp_mail.db"
-    else:
+    try:
+        # Dynamically test write permissions to identify read-only environments (Vercel, AWS Lambda)
+        test_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "test_write.tmp")
+        with open(test_path, "w") as f:
+            f.write("test")
+        os.remove(test_path)
         DB_PATH = "temp_mail.db"
+    except (IOError, OSError):
+        import tempfile
+        DB_PATH = os.path.join(tempfile.gettempdir(), "temp_mail.db")
 SMTP_HOST = os.getenv("SMTP_HOST", "0.0.0.0")
 SMTP_PORT = int(os.getenv("SMTP_PORT", 2525))
 API_PORT = int(os.getenv("API_PORT", 5000))
