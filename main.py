@@ -901,6 +901,14 @@ def initialize_database():
         init_db()
         app._db_initialized = True
 
+import traceback
+@app.errorhandler(Exception)
+def handle_exception(e):
+    return jsonify({
+        "error": str(e),
+        "traceback": traceback.format_exc()
+    }), 500
+
 @app.route('/api/auth/register', methods=['POST'])
 def register():
     data = request.json or {}
