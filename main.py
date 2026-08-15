@@ -46,10 +46,6 @@ load_dotenv()
 CUSTOM_DOMAIN = os.getenv("CUSTOM_DOMAIN", "damxd.shop")
 
 def get_db_path():
-    db_path = os.getenv("DB_PATH")
-    if db_path:
-        return db_path
-    
     # Explicitly check for serverless environments (Vercel / AWS Lambda)
     is_serverless = (
         os.environ.get('VERCEL') == '1' or 
@@ -58,10 +54,16 @@ def get_db_path():
         os.path.abspath(__file__).startswith('/var/lang') or
         os.environ.get('NOW_REGION') is not None
     )
+    
+    db_path = os.getenv("DB_PATH")
     if is_serverless:
         import tempfile
-        return os.path.join(tempfile.gettempdir(), "temp_mail.db")
-    return "temp_mail.db"
+        # Redirect relative paths (like "temp_mail.db") to writeable temp dir under serverless runtime
+        if not db_path or not os.path.isabs(db_path) or db_path == "temp_mail.db":
+            return os.path.join(tempfile.gettempdir(), "temp_mail.db")
+        return db_path
+        
+    return db_path if db_path else "temp_mail.db"
 SMTP_HOST = os.getenv("SMTP_HOST", "0.0.0.0")
 SMTP_PORT = int(os.getenv("SMTP_PORT", 2525))
 API_PORT = int(os.getenv("API_PORT", 5000))
@@ -918,9 +920,6 @@ import traceback
 def handle_exception(e):
     return jsonify({
         "error": str(e),
-        "db_path": get_db_path(),
-        "file_path": os.path.abspath(__file__),
-        "env_vars": {k: v for k, v in os.environ.items() if "SECRET" not in k and "KEY" not in k and "PASSWORD" not in k and "TOKEN" not in k},
         "traceback": traceback.format_exc()
     }), 500
 
