@@ -44,20 +44,24 @@ except Exception:
 load_dotenv()
 
 CUSTOM_DOMAIN = os.getenv("CUSTOM_DOMAIN", "damxd.shop")
-DB_PATH = os.getenv("DB_PATH")
-if not DB_PATH:
+
+def get_db_path():
+    db_path = os.getenv("DB_PATH")
+    if db_path:
+        return db_path
+    
     # Explicitly check for serverless environments (Vercel / AWS Lambda)
     is_serverless = (
         os.environ.get('VERCEL') == '1' or 
         'AWS_LAMBDA_FUNCTION_NAME' in os.environ or
         os.path.abspath(__file__).startswith('/var/task') or
-        os.path.abspath(__file__).startswith('/var/lang')
+        os.path.abspath(__file__).startswith('/var/lang') or
+        os.environ.get('NOW_REGION') is not None
     )
     if is_serverless:
         import tempfile
-        DB_PATH = os.path.join(tempfile.gettempdir(), "temp_mail.db")
-    else:
-        DB_PATH = "temp_mail.db"
+        return os.path.join(tempfile.gettempdir(), "temp_mail.db")
+    return "temp_mail.db"
 SMTP_HOST = os.getenv("SMTP_HOST", "0.0.0.0")
 SMTP_PORT = int(os.getenv("SMTP_PORT", 2525))
 API_PORT = int(os.getenv("API_PORT", 5000))
@@ -74,7 +78,7 @@ if not SECRET_KEY:
 @contextmanager
 def get_db():
     """Context manager for SQLite database connections to ensure proper closing."""
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(get_db_path())
     try:
         yield conn
     finally:
@@ -914,7 +918,7 @@ import traceback
 def handle_exception(e):
     return jsonify({
         "error": str(e),
-        "db_path": DB_PATH,
+        "db_path": get_db_path(),
         "traceback": traceback.format_exc()
     }), 500
 
