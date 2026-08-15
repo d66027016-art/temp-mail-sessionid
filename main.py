@@ -886,14 +886,20 @@ def run_smtp():
 # FLASK WEB INTERFACE & ROUTES
 # ============================================================
 
-app = Flask(__name__)
+template_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'templates'))
+static_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'static'))
+app = Flask(__name__, template_folder=template_dir, static_folder=static_dir)
 app.secret_key = SECRET_KEY
 temp_mail = TempMail()
 domain_manager = DomainManager()
 user_manager = UserManager()
 
-# Initialize database tables (idempotent, runs on module import)
-init_db()
+# Initialize database tables on first request (prevents crashes during serverless module load/compilation)
+@app.before_request
+def initialize_database():
+    if not getattr(app, '_db_initialized', False):
+        init_db()
+        app._db_initialized = True
 
 @app.route('/api/auth/register', methods=['POST'])
 def register():
