@@ -66,7 +66,7 @@ def get_db_path():
     return db_path if db_path else "temp_mail.db"
 SMTP_HOST = os.getenv("SMTP_HOST", "0.0.0.0")
 SMTP_PORT = int(os.getenv("SMTP_PORT", 2525))
-API_PORT = int(os.getenv("API_PORT", 5000))
+API_PORT = int(os.getenv("PORT", os.getenv("API_PORT", 5000)))
 
 # Flask Session Secret Key
 SECRET_KEY = os.getenv("SECRET_KEY")
@@ -81,6 +81,11 @@ if not SECRET_KEY:
 def get_db():
     """Context manager for SQLite database connections to ensure proper closing."""
     conn = sqlite3.connect(get_db_path())
+    try:
+        conn.execute("PRAGMA journal_mode=WAL;")
+        conn.execute("PRAGMA synchronous=NORMAL;")
+    except sqlite3.Error:
+        pass
     try:
         yield conn
     finally:
@@ -672,15 +677,19 @@ class TempMail:
             c.execute(
                 "SELECT id FROM inboxes WHERE expires_at < datetime('now') AND is_active = 1"
             )
-            expired = c.fetchall()
+            expired_ids = [row[0] for row in c.fetchall()]
             
-            if expired:
-                ids = [row[0] for row in expired]
-                placeholders = ','.join(['?'] * len(ids))
-                c.execute(f"DELETE FROM emails WHERE inbox_id IN ({placeholders})", ids)
-                c.execute(f"UPDATE inboxes SET is_active = 0 WHERE id IN ({placeholders})", ids)
+            if expired_ids:
+                c.execute(
+                    """DELETE FROM emails WHERE inbox_id IN (
+                        SELECT id FROM inboxes WHERE expires_at < datetime('now') AND is_active = 1
+                    )"""
+                )
+                c.execute(
+                    "UPDATE inboxes SET is_active = 0 WHERE expires_at < datetime('now') AND is_active = 1"
+                )
                 conn.commit()
-        return len(expired)
+        return len(expired_ids)
     
     def add_forwarding_rule(self, inbox_id, forward_to):
         with get_db() as conn:
@@ -980,6 +989,66 @@ def upgrade_user():
     new_status = not user['is_premium']
     user_manager.set_premium_status(user_id, new_status)
     return jsonify({"success": True, "is_premium": new_status})
+
+@app.route('/api/webhook/incoming-email', methods=['POST'])
+def incoming_email_webhook():
+    # Security check: verify token if configured
+    webhook_token = os.getenv("WEBHOOK_SECRET_TOKEN")
+    if webhook_token:
+        provided_token = request.headers.get("X-Webhook-Token") or request.args.get("token")
+        if provided_token != webhook_token:
+            return jsonify({"success": False, "error": "Unauthorized"}), 401
+            
+    data = request.json or {}
+    
+    # 1. Check if raw email is sent
+    raw_content = data.get("raw")
+    if raw_content:
+        sender = data.get("from")
+        recipients = data.get("to")
+        if isinstance(recipients, str):
+            recipients = [r.strip() for r in recipients.split(",") if r.strip()]
+        elif not isinstance(recipients, list):
+            recipients = [recipients] if recipients else []
+            
+        if not sender or not recipients:
+            return jsonify({"success": False, "error": "Missing 'from' or 'to' for raw email parsing"}), 400
+            
+        try:
+            raw_bytes = raw_content.encode("utf-8")
+            handle_incoming_email(sender, recipients, raw_bytes)
+            return jsonify({"success": True, "message": "Raw email processed successfully"})
+        except Exception as e:
+            return jsonify({"success": False, "error": f"Failed to process raw email: {str(e)}"}), 500
+            
+    # 2. Otherwise process structured email
+    sender = data.get("sender") or data.get("from")
+    recipients = data.get("recipients") or data.get("to")
+    subject = data.get("subject", "No Subject")
+    body = data.get("body", "")
+    html_body = data.get("html_body")
+    message_id = data.get("message_id")
+    
+    if isinstance(recipients, str):
+        recipients = [r.strip() for r in recipients.split(",") if r.strip()]
+    elif not isinstance(recipients, list):
+        recipients = [recipients] if recipients else []
+        
+    if not sender or not recipients:
+        return jsonify({"success": False, "error": "Missing sender or recipients"}), 400
+        
+    try:
+        stored = temp_mail.receive_email(
+            sender=sender,
+            recipients=recipients,
+            subject=subject,
+            body=body,
+            html_body=html_body,
+            message_id=message_id
+        )
+        return jsonify({"success": True, "stored_inboxes": stored})
+    except Exception as e:
+        return jsonify({"success": False, "error": f"Failed to process structured email: {str(e)}"}), 500
 
 @app.route('/')
 def index():

@@ -1867,7 +1867,30 @@
         // Check user session status on load
         window.addEventListener('DOMContentLoaded', () => {
             checkAuthStatus();
+            initAuthInputSync();
         });
+
+        function initAuthInputSync() {
+            const syncPairs = [
+                { el1: 'modalLoginUsername', el2: 'loginUsername' },
+                { el1: 'modalLoginPassword', el2: 'loginPassword' },
+                { el1: 'modalRegisterUsername', el2: 'registerUsername' },
+                { el1: 'modalRegisterPassword', el2: 'registerPassword' }
+            ];
+
+            syncPairs.forEach(({ el1, el2 }) => {
+                const input1 = document.getElementById(el1);
+                const input2 = document.getElementById(el2);
+                if (input1 && input2) {
+                    input1.addEventListener('input', () => {
+                        input2.value = input1.value;
+                    });
+                    input2.addEventListener('input', () => {
+                        input1.value = input2.value;
+                    });
+                }
+            });
+        }
 
         function checkAuthStatus() {
             fetch('/api/auth/status')
@@ -1877,31 +1900,80 @@
                 });
         }
 
-        function toggleAuthSubTab(subTab) {
-            const loginBtn = document.getElementById('auth-tab-login');
-            const regBtn = document.getElementById('auth-tab-register');
-            const loginForm = document.getElementById('auth-form-login');
-            const regForm = document.getElementById('auth-form-register');
+        function switchAuthSubTab(subTab) {
+            // Update Panel Tab
+            const panelLoginBtn = document.getElementById('auth-tab-login');
+            const panelRegBtn = document.getElementById('auth-tab-register');
+            const panelLoginForm = document.getElementById('auth-form-login');
+            const panelRegForm = document.getElementById('auth-form-register');
+
+            // Update Modal Tab
+            const modalLoginBtn = document.getElementById('modal-tab-login');
+            const modalRegBtn = document.getElementById('modal-tab-register');
+            const modalLoginForm = document.getElementById('modal-form-login');
+            const modalRegForm = document.getElementById('modal-form-register');
 
             if (subTab === 'login') {
-                loginBtn.style.borderBottom = '2px solid #f43f5e';
-                loginBtn.style.fontWeight = '700';
-                loginBtn.style.color = '#f43f5e';
-                regBtn.style.borderBottom = 'none';
-                regBtn.style.fontWeight = '600';
-                regBtn.style.color = 'var(--text-muted)';
-                loginForm.style.display = 'flex';
-                regForm.style.display = 'none';
+                if (panelLoginBtn) {
+                    panelLoginBtn.style.borderBottom = '2px solid #f43f5e';
+                    panelLoginBtn.style.fontWeight = '700';
+                    panelLoginBtn.style.color = '#f43f5e';
+                }
+                if (panelRegBtn) {
+                    panelRegBtn.style.borderBottom = 'none';
+                    panelRegBtn.style.fontWeight = '600';
+                    panelRegBtn.style.color = 'var(--text-muted)';
+                }
+                if (panelLoginForm) panelLoginForm.style.display = 'flex';
+                if (panelRegForm) panelRegForm.style.display = 'none';
+
+                if (modalLoginBtn) {
+                    modalLoginBtn.style.borderBottom = '2px solid #f43f5e';
+                    modalLoginBtn.style.fontWeight = '700';
+                    modalLoginBtn.style.color = '#f43f5e';
+                }
+                if (modalRegBtn) {
+                    modalRegBtn.style.borderBottom = 'none';
+                    modalRegBtn.style.fontWeight = '600';
+                    modalRegBtn.style.color = 'var(--text-muted)';
+                }
+                if (modalLoginForm) modalLoginForm.style.display = 'flex';
+                if (modalRegForm) modalRegForm.style.display = 'none';
             } else {
-                regBtn.style.borderBottom = '2px solid #f43f5e';
-                regBtn.style.fontWeight = '700';
-                regBtn.style.color = '#f43f5e';
-                loginBtn.style.borderBottom = 'none';
-                loginBtn.style.fontWeight = '600';
-                loginBtn.style.color = 'var(--text-muted)';
-                regForm.style.display = 'flex';
-                loginForm.style.display = 'none';
+                if (panelRegBtn) {
+                    panelRegBtn.style.borderBottom = '2px solid #f43f5e';
+                    panelRegBtn.style.fontWeight = '700';
+                    panelRegBtn.style.color = '#f43f5e';
+                }
+                if (panelLoginBtn) {
+                    panelLoginBtn.style.borderBottom = 'none';
+                    panelLoginBtn.style.fontWeight = '600';
+                    panelLoginBtn.style.color = 'var(--text-muted)';
+                }
+                if (panelRegForm) panelRegForm.style.display = 'flex';
+                if (panelLoginForm) panelLoginForm.style.display = 'none';
+
+                if (modalRegBtn) {
+                    modalRegBtn.style.borderBottom = '2px solid #f43f5e';
+                    modalRegBtn.style.fontWeight = '700';
+                    modalRegBtn.style.color = '#f43f5e';
+                }
+                if (modalLoginBtn) {
+                    modalLoginBtn.style.borderBottom = 'none';
+                    modalLoginBtn.style.fontWeight = '600';
+                    modalLoginBtn.style.color = 'var(--text-muted)';
+                }
+                if (modalRegForm) modalRegForm.style.display = 'flex';
+                if (modalLoginForm) modalLoginForm.style.display = 'none';
             }
+        }
+
+        function toggleAuthSubTab(subTab) {
+            switchAuthSubTab(subTab);
+        }
+
+        function toggleModalSubTab(subTab) {
+            switchAuthSubTab(subTab);
         }
 
         function updateAuthUI(data) {
@@ -1947,40 +2019,7 @@
             lucide.createIcons();
         }
 
-        function handleRegister() {
-            const userEl = document.getElementById('registerUsername');
-            const passEl = document.getElementById('registerPassword');
-            const username = userEl.value.trim();
-            const password = passEl.value;
-
-            if (!username || !password) {
-                return showToast('⚠️ Username and password are required', true);
-            }
-
-            fetch('/api/auth/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
-            })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    showToast('✨ Account registered and logged in!');
-                    userEl.value = '';
-                    passEl.value = '';
-                    checkAuthStatus();
-                } else {
-                    showToast('❌ ' + data.error, true);
-                }
-            });
-        }
-
-        function handleLogin() {
-            const userEl = document.getElementById('loginUsername');
-            const passEl = document.getElementById('loginPassword');
-            const username = userEl.value.trim();
-            const password = passEl.value;
-
+        function performLogin(username, password, isModal) {
             if (!username || !password) {
                 return showToast('⚠️ Username and password are required', true);
             }
@@ -1994,13 +2033,80 @@
             .then(data => {
                 if (data.success) {
                     showToast('🔐 Logged in successfully!');
-                    userEl.value = '';
-                    passEl.value = '';
+                    const fields = ['loginUsername', 'loginPassword', 'modalLoginUsername', 'modalLoginPassword'];
+                    fields.forEach(id => {
+                        const el = document.getElementById(id);
+                        if (el) el.value = '';
+                    });
+                    
+                    if (isModal) {
+                        closeAuthModal();
+                        setTimeout(() => {
+                            switchTab('customname');
+                        }, 300);
+                    }
                     checkAuthStatus();
                 } else {
                     showToast('❌ ' + data.error, true);
                 }
             });
+        }
+
+        function performRegister(username, password, isModal) {
+            if (!username || !password) {
+                return showToast('⚠️ Username and password are required', true);
+            }
+
+            fetch('/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('✨ Account registered and logged in!');
+                    const fields = ['registerUsername', 'registerPassword', 'modalRegisterUsername', 'modalRegisterPassword'];
+                    fields.forEach(id => {
+                        const el = document.getElementById(id);
+                        if (el) el.value = '';
+                    });
+                    
+                    if (isModal) {
+                        closeAuthModal();
+                        setTimeout(() => {
+                            switchTab('customname');
+                        }, 300);
+                    }
+                    checkAuthStatus();
+                } else {
+                    showToast('❌ ' + data.error, true);
+                }
+            });
+        }
+
+        function handleRegister() {
+            const username = document.getElementById('registerUsername').value.trim();
+            const password = document.getElementById('registerPassword').value;
+            performRegister(username, password, false);
+        }
+
+        function handleLogin() {
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            performLogin(username, password, false);
+        }
+
+        function handleModalRegister() {
+            const username = document.getElementById('modalRegisterUsername').value.trim();
+            const password = document.getElementById('modalRegisterPassword').value;
+            performRegister(username, password, true);
+        }
+
+        function handleModalLogin() {
+            const username = document.getElementById('modalLoginUsername').value.trim();
+            const password = document.getElementById('modalLoginPassword').value;
+            performLogin(username, password, true);
         }
 
         function handleLogout() {
@@ -2041,97 +2147,6 @@
 
         function closeAuthModal() {
             document.getElementById('authModal').style.display = 'none';
-        }
-
-        function toggleModalSubTab(subTab) {
-            const loginBtn = document.getElementById('modal-tab-login');
-            const regBtn = document.getElementById('modal-tab-register');
-            const loginForm = document.getElementById('modal-form-login');
-            const regForm = document.getElementById('modal-form-register');
-
-            if (subTab === 'login') {
-                loginBtn.style.borderBottom = '2px solid #f43f5e';
-                loginBtn.style.fontWeight = '700';
-                loginBtn.style.color = '#f43f5e';
-                regBtn.style.borderBottom = 'none';
-                regBtn.style.fontWeight = '600';
-                regBtn.style.color = 'var(--text-muted)';
-                loginForm.style.display = 'flex';
-                regForm.style.display = 'none';
-            } else {
-                regBtn.style.borderBottom = '2px solid #f43f5e';
-                regBtn.style.fontWeight = '700';
-                regBtn.style.color = '#f43f5e';
-                loginBtn.style.borderBottom = 'none';
-                loginBtn.style.fontWeight = '600';
-                loginBtn.style.color = 'var(--text-muted)';
-                regForm.style.display = 'flex';
-                loginForm.style.display = 'none';
-            }
-        }
-
-        function handleModalLogin() {
-            const userEl = document.getElementById('modalLoginUsername');
-            const passEl = document.getElementById('modalLoginPassword');
-            const username = userEl.value.trim();
-            const password = passEl.value;
-
-            if (!username || !password) {
-                return showToast('⚠️ Username and password are required', true);
-            }
-
-            fetch('/api/auth/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
-            })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    showToast('🔐 Logged in successfully!');
-                    userEl.value = '';
-                    passEl.value = '';
-                    closeAuthModal();
-                    checkAuthStatus();
-                    setTimeout(() => {
-                        switchTab('customname');
-                    }, 300);
-                } else {
-                    showToast('❌ ' + data.error, true);
-                }
-            });
-        }
-
-        function handleModalRegister() {
-            const userEl = document.getElementById('modalRegisterUsername');
-            const passEl = document.getElementById('modalRegisterPassword');
-            const username = userEl.value.trim();
-            const password = passEl.value;
-
-            if (!username || !password) {
-                return showToast('⚠️ Username and password are required', true);
-            }
-
-            fetch('/api/auth/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
-            })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    showToast('✨ Account registered and logged in!');
-                    userEl.value = '';
-                    passEl.value = '';
-                    closeAuthModal();
-                    checkAuthStatus();
-                    setTimeout(() => {
-                        switchTab('customname');
-                    }, 300);
-                } else {
-                    showToast('❌ ' + data.error, true);
-                }
-            });
         }
     </script>
 </body>

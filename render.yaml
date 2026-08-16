@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: damxd-mail
+    runtime: docker
+    plan: free # Can be upgraded to 'starter' if persistent disk is needed
+    envVars:
+      - key: CUSTOM_DOMAIN
+        value: damxd.shop
+      - key: DB_PATH
+        value: /data/temp_mail.db
+      - key: SECRET_KEY
+        generateValue: true
+      - key: WEBHOOK_SECRET_TOKEN
+        generateValue: true # Generate a random secret token for webhook verification
+      - key: SMTP_HOST
+        value: 127.0.0.1
+      - key: SMTP_PORT
+        value: 2525
+      # Note: Render Free tier does not support persistent disks.
+      # If you upgrade to a paid plan (e.g., starter) and want to persist data,
+      # uncomment the 'disk' configuration block below:
+      # disk:
+      #   name: mail-data
+      #   mountPath: /data
+      #   sizeGB: 1
